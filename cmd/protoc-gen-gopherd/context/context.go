@@ -25,9 +25,9 @@ type Context struct {
 		TypesFile    string
 		ConstPrefix  string
 		ConstSuffix  string
-		TypeMethod   string
 		TypeRegistry string
 	}
+	ProtobufPkg string
 }
 
 func New(plugin *protogen.Plugin) *Context {

@@ -105,6 +105,9 @@ func Generate(ctx *context.Context, gen *protogen.Plugin, f *protogen.File) erro
 	if ctx.Type.TypeRegistry != "" {
 		g.P("import registry ", `"`, ctx.Type.TypeRegistry, `"`)
 	}
+	g.P("import proto ", `"`, ctx.ProtobufPkg, `"`)
+	g.P()
+	g.P("var _ = proto.Marshal")
 	for name, anns := range annotations {
 		if name == AnnotationType {
 			if err := generateTypeAnnotation(ctx, gen, f, g, anns); err != nil {

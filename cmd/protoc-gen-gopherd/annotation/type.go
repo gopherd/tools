@@ -269,23 +269,25 @@ func generateTypeAnnotation(ctx *context.Context, gen *protogen.Plugin, f *proto
 				g.P(constName, " = ", messageType.Oneof.Value)
 			}
 			g.P(")")
-
-			if ctx.Type.TypeMethod != "" {
+			g.P()
+			g.P("func init() {")
+			for _, ann := range typedAnns {
+				name := ann.associated.oneof.message.GoIdent.GoName
+				constName := ctx.Type.ConstPrefix + name + ctx.Type.ConstSuffix
+				g.P("\tregistry.Register(", `"`, f.GoPackageName, `",`, constName, ", func() registry.Message { return new(", name, ") })")
+			}
+			g.P("}")
+			for _, ann := range typedAnns {
 				g.P()
-				g.P("func init() {")
-				for _, ann := range typedAnns {
-					name := ann.associated.oneof.message.GoIdent.GoName
-					constName := ctx.Type.ConstPrefix + name + ctx.Type.ConstSuffix
-					g.P("\tregistry.Register(", `"`, f.GoPackageName, `",`, constName, ", func() registry.Message { return new(", name, ") })")
-				}
+				name := ann.associated.oneof.message.GoIdent.GoName
+				constName := ctx.Type.ConstPrefix + name + ctx.Type.ConstSuffix
+				g.P("func (*", name, ") Typeof() registry.Type { return ", constName, " }")
+				g.P("func (m *", name, ") Sizeof() int { return proto.Size(m) }")
+				g.P("func (m *", name, ") Nameof() string { return string(proto.MessageName(m)) }")
+				g.P("func (m *", name, ") Unmarshal(buf []byte) error { return proto.Unmarshal(buf, m) }")
+				g.P("func (m *", name, ") MarshalAppend(buf []byte, useCachedSize bool) ([]byte, error) {")
+				g.P("\treturn proto.MarshalOptions{UseCachedSize: useCachedSize}.MarshalAppend(buf, m)")
 				g.P("}")
-
-				g.P()
-				for _, ann := range typedAnns {
-					name := ann.associated.oneof.message.GoIdent.GoName
-					constName := ctx.Type.ConstPrefix + name + ctx.Type.ConstSuffix
-					g.P("\tfunc (*", name, ") ", ctx.Type.TypeMethod, "() registry.Type { return ", constName, " }")
-				}
 			}
 		}
 	}
