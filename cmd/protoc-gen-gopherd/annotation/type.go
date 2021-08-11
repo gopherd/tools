@@ -282,8 +282,8 @@ func generateTypeAnnotation(ctx *context.Context, gen *protogen.Plugin, f *proto
 				name := ann.associated.oneof.message.GoIdent.GoName
 				constName := ctx.Type.ConstPrefix + name + ctx.Type.ConstSuffix
 				g.P("func (*", name, ") Typeof() registry.Type { return ", constName, " }")
+				g.P("func (*", name, ") Nameof() string { return \""+string(f.GoPackageName)+"."+name+"\" }")
 				g.P("func (m *", name, ") Sizeof() int { return proto.Size(m) }")
-				g.P("func (m *", name, ") Nameof() string { return string(proto.MessageName(m)) }")
 				g.P("func (m *", name, ") Unmarshal(buf []byte) error { return proto.Unmarshal(buf, m) }")
 				g.P("func (m *", name, ") MarshalAppend(buf []byte, useCachedSize bool) ([]byte, error) {")
 				g.P("\treturn proto.MarshalOptions{UseCachedSize: useCachedSize}.MarshalAppend(buf, m)")
