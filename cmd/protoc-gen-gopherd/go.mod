@@ -1,4 +1,4 @@
-module github.com/gopherd/tools
+module github.com/gopherd/tools/cmd/protoc-gen-gopherd
 
 go 1.16
 
