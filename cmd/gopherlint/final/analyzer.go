@@ -41,7 +41,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			var groupFinalPos = getFinalDirectivePos(pass, x, x.Doc)
 			var groupFinalPosition token.Position
 			if groupFinalPos.IsValid() {
-				groupFinalPosition = pass.Fset.Position(groupFinalPos)
+				groupFinalPosition = getFileAndLine(pass, groupFinalPos)
 			}
 			for _, spec := range x.Specs {
 				var finalPos = groupFinalPos
@@ -51,32 +51,65 @@ func run(pass *analysis.Pass) (interface{}, error) {
 					continue
 				} else if !finalPos.IsValid() {
 					finalPos = getFinalDirectivePos(pass, valueSpec, valueSpec.Doc)
-					position = pass.Fset.Position(finalPos)
+					position = getFileAndLine(pass, finalPos)
 				}
 				if finalPos.IsValid() {
-					exportFinals(pass, localFinals, valueSpec.Names, position)
+					exportFinalObjects(pass, localFinals, valueSpec.Names, position)
 				}
 			}
 		case *ast.ValueSpec:
 			if finalPos := getFinalDirectivePos(pass, x, x.Doc); finalPos.IsValid() {
-				exportFinals(pass, localFinals, x.Names, pass.Fset.Position(finalPos))
+				exportFinalObjects(pass, localFinals, x.Names, getFileAndLine(pass, finalPos))
 			}
 		}
 	})
 
-	inspect.Preorder([]ast.Node{(*ast.AssignStmt)(nil)}, func(n ast.Node) {
-		assign, ok := n.(*ast.AssignStmt)
-		if !ok {
-			return
-		}
-		for _, expr := range assign.Lhs {
-			checkFinalVar(pass, localFinals, expr)
+	inspect.Preorder([]ast.Node{
+		(*ast.AssignStmt)(nil),
+		(*ast.UnaryExpr)(nil),
+		(*ast.ExprStmt)(nil),
+	}, func(n ast.Node) {
+		switch x := n.(type) {
+		case *ast.AssignStmt:
+			for _, expr := range x.Lhs {
+				checkFinalObject(pass, localFinals, expr, token.ASSIGN, false)
+			}
+		case *ast.UnaryExpr:
+			if x.Op == token.AND {
+				checkFinalObject(pass, localFinals, x.X, x.Op, false)
+			}
+		case *ast.ExprStmt:
+			println("check pointer receiver 1")
+			call, ok := util.Unparen(n.(*ast.ExprStmt).X).(*ast.CallExpr)
+			if !ok {
+				return // not a call statement
+			}
+			fun := util.Unparen(call.Fun)
+			if pass.TypesInfo.Types[fun].IsType() {
+				return // a conversion, not a call
+			}
+			fn, signature, isMethod := util.GetFunc(pass, fun)
+			if fn == nil || signature == nil || !isMethod || signature.Recv().Anonymous() {
+				return
+			}
+			if _, isPointer := signature.Recv().Type().(*types.Pointer); !isPointer {
+				return
+			}
+			selector := fun.(*ast.SelectorExpr)
+			println("check pointer receiver")
+			checkFinalObject(pass, localFinals, selector.X, token.AND, true)
 		}
 	})
 	return nil, nil
 }
 
-func checkFinalVar(pass *analysis.Pass, finals map[types.Object]*finalDeclFact, expr ast.Expr) {
+func getFileAndLine(pass *analysis.Pass, pos token.Pos) token.Position {
+	position := pass.Fset.Position(pos)
+	position.Column = 0
+	return position
+}
+
+func checkFinalObject(pass *analysis.Pass, finals map[types.Object]*finalDeclFact, expr ast.Expr, op token.Token, ignorePointer bool) {
 	expr = util.Unparen(expr)
 	var ident *ast.Ident
 	switch x := expr.(type) {
@@ -89,15 +122,33 @@ func checkFinalVar(pass *analysis.Pass, finals map[types.Object]*finalDeclFact, 
 		return
 	}
 	obj := pass.TypesInfo.ObjectOf(ident)
-	if obj != nil {
-		pos, ok := isFinalObj(pass, finals, obj)
-		if ok {
-			pass.Reportf(expr.Pos(), "assign value to a final variable %s (directive %q declared here %s)", ident.Name, directive, pos.String())
+	if obj == nil {
+		return
+	}
+	if ignorePointer {
+		if _, isPointer := obj.Type().(*types.Pointer); isPointer {
+			return
+		}
+	}
+	if position, ok := lookupFinalObject(pass, finals, obj); ok {
+		switch op {
+		case token.ASSIGN:
+			pass.Reportf(
+				expr.Pos(),
+				"can't assign a value to final variable %s (directive %q declared here %s)",
+				ident.Name, directive, position.String(),
+			)
+		case token.AND:
+			pass.Reportf(
+				expr.Pos(),
+				"can't reference final variable %s (directive %q declared here %s)",
+				ident.Name, directive, position.String(),
+			)
 		}
 	}
 }
 
-func exportFinals(pass *analysis.Pass, finals map[types.Object]*finalDeclFact, names []*ast.Ident, position token.Position) {
+func exportFinalObjects(pass *analysis.Pass, finals map[types.Object]*finalDeclFact, names []*ast.Ident, position token.Position) {
 	position.Column = 0 // ignore column
 	for _, v := range names {
 		if v.Name == "_" {
@@ -113,7 +164,10 @@ func exportFinals(pass *analysis.Pass, finals map[types.Object]*finalDeclFact, n
 	}
 }
 
-func isFinalObj(pass *analysis.Pass, finals map[types.Object]*finalDeclFact, obj types.Object) (pos token.Position, ok bool) {
+func lookupFinalObject(pass *analysis.Pass, finals map[types.Object]*finalDeclFact, obj types.Object) (pos token.Position, ok bool) {
+	if obj == nil {
+		return
+	}
 	if fact, ok := finals[obj]; ok {
 		return fact.position, true
 	}

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gopherd/tools/cmd/gopherlint/util"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
@@ -39,11 +40,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		(*ast.ExprStmt)(nil),
 	}
 	inspect.Preorder(nodeFilter, func(n ast.Node) {
-		call, ok := unparen(n.(*ast.ExprStmt).X).(*ast.CallExpr)
+		call, ok := util.Unparen(n.(*ast.ExprStmt).X).(*ast.CallExpr)
 		if !ok {
 			return // not a call statement
 		}
-		fun := unparen(call.Fun)
+		fun := util.Unparen(call.Fun)
 
 		if pass.TypesInfo.Types[fun].IsType() {
 			return // a conversion, not a call
@@ -86,17 +87,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 	})
 	return nil, nil
-}
-
-// unparen returns e with any enclosing parentheses stripped.
-func unparen(e ast.Expr) ast.Expr {
-	for {
-		p, ok := e.(*ast.ParenExpr)
-		if !ok {
-			return e
-		}
-		e = p.X
-	}
 }
 
 func isUnusedResult(sig *types.Signature) bool {

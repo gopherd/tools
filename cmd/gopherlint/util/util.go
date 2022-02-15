@@ -112,9 +112,8 @@ func GetFunc(pass *analysis.Pass, fun ast.Expr) (*types.Func, *types.Signature, 
 	sel, ok := pass.TypesInfo.Selections[selector]
 	if ok && sel.Kind() == types.MethodVal {
 		// method (e.g. foo.String())
-		sig := sel.Type().(*types.Signature)
 		if obj, ok := sel.Obj().(*types.Func); ok {
-			return obj, sig, true
+			return obj, obj.Type().(*types.Signature), true
 		}
 	} else if !ok {
 		// package-qualified function (e.g. fmt.Errorf)

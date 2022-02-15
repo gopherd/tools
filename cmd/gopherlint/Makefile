@@ -6,8 +6,8 @@ all: unusedresult final
 
 .PHONY: unusedresult
 unusedresult:
-	-go run . -unusedresult -unusedresult.types *${TESTPKG}/a.user ./${TESTSRC}/a
+	-go run . -unusedresult -unusedresult.types *${TESTPKG}/a.user ./${TESTSRC}/...
 
 .PHONY: final
 final:
-	-go run . -final ./${TESTSRC}/a
+	-go run . -final ./${TESTSRC}/...
