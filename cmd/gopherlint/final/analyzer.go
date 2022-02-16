@@ -38,19 +38,20 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			if x.Tok != token.VAR {
 				return
 			}
-			var groupFinalPos = getFinalDirectivePos(pass, x, x.Doc)
+			var groupFinalPos = getFinalDirectivePos(pass, x.Doc)
 			var groupFinalPosition token.Position
 			if groupFinalPos.IsValid() {
 				groupFinalPosition = getFileAndLine(pass, groupFinalPos)
 			}
 			for _, spec := range x.Specs {
-				var finalPos = groupFinalPos
-				var position = groupFinalPosition
 				valueSpec, ok := spec.(*ast.ValueSpec)
 				if !ok {
 					continue
-				} else if !finalPos.IsValid() {
-					finalPos = getFinalDirectivePos(pass, valueSpec, valueSpec.Doc)
+				}
+				var finalPos = groupFinalPos
+				var position = groupFinalPosition
+				if !finalPos.IsValid() {
+					finalPos = getFinalDirectivePos(pass, valueSpec.Doc)
 					position = getFileAndLine(pass, finalPos)
 				}
 				if finalPos.IsValid() {
@@ -58,7 +59,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				}
 			}
 		case *ast.ValueSpec:
-			if finalPos := getFinalDirectivePos(pass, x, x.Doc); finalPos.IsValid() {
+			if finalPos := getFinalDirectivePos(pass, x.Doc); finalPos.IsValid() {
 				exportFinalObjects(pass, localFinals, x.Names, getFileAndLine(pass, finalPos))
 			}
 		}
@@ -79,7 +80,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				checkFinalObject(pass, localFinals, x.X, x.Op, false)
 			}
 		case *ast.ExprStmt:
-			println("check pointer receiver 1")
 			call, ok := util.Unparen(n.(*ast.ExprStmt).X).(*ast.CallExpr)
 			if !ok {
 				return // not a call statement
@@ -92,11 +92,14 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			if fn == nil || signature == nil || !isMethod || signature.Recv().Anonymous() {
 				return
 			}
+			recvName := signature.Recv().Name()
+			if recvName == "" || recvName == "_" {
+				return
+			}
 			if _, isPointer := signature.Recv().Type().(*types.Pointer); !isPointer {
 				return
 			}
 			selector := fun.(*ast.SelectorExpr)
-			println("check pointer receiver")
 			checkFinalObject(pass, localFinals, selector.X, token.AND, true)
 		}
 	})
@@ -151,7 +154,7 @@ func checkFinalObject(pass *analysis.Pass, finals map[types.Object]*finalDeclFac
 func exportFinalObjects(pass *analysis.Pass, finals map[types.Object]*finalDeclFact, names []*ast.Ident, position token.Position) {
 	position.Column = 0 // ignore column
 	for _, v := range names {
-		if v.Name == "_" {
+		if v.Name == "_" || v.Name == "" {
 			continue
 		}
 		obj := pass.TypesInfo.ObjectOf(v)
@@ -186,7 +189,7 @@ type finalDeclFact struct {
 func (finalDeclFact) AFact()         {}
 func (finalDeclFact) String() string { return "finalDeclFact" }
 
-func getFinalDirectivePos(pass *analysis.Pass, node ast.Node, doc *ast.CommentGroup) token.Pos {
+func getFinalDirectivePos(pass *analysis.Pass, doc *ast.CommentGroup) token.Pos {
 	if doc == nil {
 		return token.NoPos
 	}

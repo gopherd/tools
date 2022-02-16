@@ -11,6 +11,18 @@ func (user *UserInfo) Reset() {
 	*user = UserInfo{name: "noname"}
 }
 
+func (_ *UserInfo) UnderscoreReceiver() string {
+	return "UserInfo"
+}
+
+func (*UserInfo) EmptyReceiver() int {
+	return 0
+}
+
+func (user UserInfo) NonPointerReceiver() int {
+	return 0
+}
+
 //@mod:final
 var User = UserInfo{name: "hello"}
 
@@ -20,6 +32,7 @@ var UserPtr = &UserInfo{name: "hello"}
 var otherUser = UserInfo{name: "world"}
 
 func ResetUser(name string) {
+	// can't assign a value to final variable User
 	User = UserInfo{name: name}
 }
 
@@ -28,8 +41,17 @@ func _() {
 	User.Reset()
 
 	// It's ok
-	otherUser.Reset()
+	UserPtr.Reset()
 
 	// It's ok
-	UserPtr.Reset()
+	User.UnderscoreReceiver()
+
+	// It's ok
+	User.EmptyReceiver()
+
+	// It's ok
+	User.NonPointerReceiver()
+
+	// It's ok
+	otherUser.Reset()
 }
