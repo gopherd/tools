@@ -19,24 +19,24 @@ var (
 )
 
 func _() {
-	// Error: can't assign value to a final variable Final
+	// Error: cannot assign a value to final variable Final
 	b.Final = 2
 
-	// Error: can't assign value to a final variable finalSingle
+	// Error: cannot assign a value to final variable finalSingle
 	finalSingle = 2
 
-	// Error: can't assign value to a final variable finalGroup1
+	// Error: cannot assign a value to final variable finalGroup1
 	finalGroup1 = "h"
-	// Error: can't assign value to a final variable finalGroup2
+	// Error: cannot assign a value to final variable finalGroup2
 	finalGroup2 = "w"
 	_ = "x"
 
 	//@mod:final
 	//
 	var x int
-	// Error: can't assign value to a final variable x
+	// Error: cannot assign a value to final variable x
 	x = 2
-	// Error: can't reference a final variable x
+	// Error: cannot reference final variable x
 	y := &x
 	unused(y)
 
@@ -45,7 +45,7 @@ func _() {
 	z = 1
 	unused(z)
 
-	// can't reference final variable User
+	// cannot reference final variable User
 	b.User.Reset()
 
 	// It's ok

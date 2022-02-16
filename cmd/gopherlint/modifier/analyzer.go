@@ -13,7 +13,7 @@ import (
 const modifierDirective = "//@mod:"
 
 type Modifier struct {
-	Directive string         // prefix "@mod:" have been removed
+	Directive string         // prefix "@mod:" has been removed
 	Position  token.Position // position of directive
 }
 
@@ -24,11 +24,9 @@ type ModifierFact struct {
 func (ModifierFact) AFact()         {}
 func (ModifierFact) String() string { return "ModifierFact" }
 
-const Doc = `lookup modifier`
-
 var Analyzer = &analysis.Analyzer{
 	Name:      "modifier",
-	Doc:       Doc,
+	Doc:       `lookup modifiers`,
 	Requires:  []*analysis.Analyzer{inspect.Analyzer},
 	FactTypes: []analysis.Fact{new(ModifierFact)},
 	Run:       run,
@@ -118,6 +116,7 @@ func exportModifiers(pass *analysis.Pass, modifiers []Modifier, names ...*ast.Id
 		fact := &ModifierFact{
 			Modifiers: modifiers,
 		}
+		println("export modifier", len(modifiers))
 		pass.ExportObjectFact(obj, fact)
 	}
 }

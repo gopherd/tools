@@ -3,21 +3,20 @@ package unusedresult
 import (
 	"go/ast"
 	"go/types"
-	"sort"
-	"strings"
 
-	"github.com/gopherd/tools/cmd/gopherlint/util"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
+
+	"github.com/gopherd/tools/cmd/gopherlint/util"
 )
 
 const Doc = `check for unused results of calls to functions that returned result is one of types.
 
 This analyzer reports calls to certain functions in which the result of the call is ignored.
-The set of types may be controlled using flags -types.`
+The set of types may be controlled using flags -unusedresult.types.`
 
-var checkTypes stringSetFlag
+var checkTypes util.StringSetFlag
 
 func init() {
 	const pkg = "github.com/gopherd/log"
@@ -95,29 +94,4 @@ func isUnusedResult(sig *types.Signature) bool {
 		return false
 	}
 	return checkTypes[tup.At(0).Type().String()]
-}
-
-type stringSetFlag map[string]bool
-
-func (ss *stringSetFlag) String() string {
-	var items []string
-	for item := range *ss {
-		items = append(items, item)
-	}
-	sort.Strings(items)
-	return strings.Join(items, ",")
-}
-
-func (ss *stringSetFlag) Set(s string) error {
-	m := make(map[string]bool)
-	if s != "" {
-		for _, name := range strings.Split(s, ",") {
-			if name == "" {
-				continue
-			}
-			m[name] = true
-		}
-	}
-	*ss = m
-	return nil
 }

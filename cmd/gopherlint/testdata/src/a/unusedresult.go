@@ -9,6 +9,6 @@ func (u *user) end()        {}
 func _() {
 	var u user
 
-	// expect warning: result of (github.com/gopherd/tools/cmd/gopherlint/testdata/src/a.user).self call not used
+	// result of (github.com/gopherd/tools/cmd/gopherlint/testdata/src/a.user).self call not used
 	u.self()
 }

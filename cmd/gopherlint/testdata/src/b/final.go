@@ -4,11 +4,14 @@ package b
 var Final = 1
 
 type UserInfo struct {
-	name string
+	Id   int
+	Info struct {
+		Name string
+	}
 }
 
 func (user *UserInfo) Reset() {
-	*user = UserInfo{name: "noname"}
+	*user = UserInfo{}
 }
 
 func (_ *UserInfo) UnderscoreReceiver() string {
@@ -24,20 +27,20 @@ func (user UserInfo) NonPointerReceiver() int {
 }
 
 //@mod:final
-var User = UserInfo{name: "hello"}
+var User = UserInfo{Id: 1}
 
 //@mod:final
-var UserPtr = &UserInfo{name: "hello"}
+var UserPtr = &UserInfo{Id: 2}
 
-var otherUser = UserInfo{name: "world"}
+var otherUser = UserInfo{Id: 3}
 
-func ResetUser(name string) {
-	// can't assign a value to final variable User
-	User = UserInfo{name: name}
+func ResetUser(id int) {
+	// cannot assign a value to final variable User
+	User = UserInfo{Id: id}
 }
 
 func _() {
-	// can't reference final variable User
+	// cannot reference final variable User
 	User.Reset()
 
 	// It's ok
@@ -54,4 +57,14 @@ func _() {
 
 	// It's ok
 	otherUser.Reset()
+
+	// cannot assign a value to final variable User
+	User.Id = 0
+
+	// cannot assign a value to field of final variable User
+	User.Info.Name = "new name"
+
+	// cannot reference field of final variable User
+	var nameptr = &User.Info.Name
+	_ = nameptr
 }

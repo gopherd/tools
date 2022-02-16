@@ -15,11 +15,17 @@ import (
 
 const directive = "@mod:final"
 
-const Doc = `check for final variables that reassigned.`
+var flags struct {
+	verbose int
+}
+
+func init() {
+	Analyzer.Flags.IntVar(&flags.verbose, "verbose", 0, "final analyzer verbose level")
+}
 
 var Analyzer = &analysis.Analyzer{
 	Name:      "final",
-	Doc:       Doc,
+	Doc:       `check for final variables that reassigned or referenced.`,
 	Requires:  []*analysis.Analyzer{inspect.Analyzer},
 	FactTypes: []analysis.Fact{new(finalDeclFact)},
 	Run:       run,
@@ -31,7 +37,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 	inspect.Preorder([]ast.Node{
 		(*ast.GenDecl)(nil),
-		(*ast.ValueSpec)(nil),
 	}, func(n ast.Node) {
 		switch x := n.(type) {
 		case *ast.GenDecl:
@@ -57,10 +62,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				if finalPos.IsValid() {
 					exportFinalObjects(pass, localFinals, valueSpec.Names, position)
 				}
-			}
-		case *ast.ValueSpec:
-			if finalPos := getFinalDirectivePos(pass, x.Doc); finalPos.IsValid() {
-				exportFinalObjects(pass, localFinals, x.Names, getFileAndLine(pass, finalPos))
 			}
 		}
 	})
@@ -114,38 +115,72 @@ func getFileAndLine(pass *analysis.Pass, pos token.Pos) token.Position {
 
 func checkFinalObject(pass *analysis.Pass, finals map[types.Object]*finalDeclFact, expr ast.Expr, op token.Token, ignorePointer bool) {
 	expr = util.Unparen(expr)
+	var pos = expr.Pos()
 	var ident *ast.Ident
-	switch x := expr.(type) {
-	case *ast.Ident:
-		ident = x
-	case *ast.SelectorExpr:
-		ident = x.Sel
-	}
-	if ident == nil {
-		return
-	}
-	obj := pass.TypesInfo.ObjectOf(ident)
-	if obj == nil {
-		return
-	}
-	if ignorePointer {
-		if _, isPointer := obj.Type().(*types.Pointer); isPointer {
+	var position token.Position
+	var ok bool
+	var field bool
+	for expr != nil {
+		switch x := expr.(type) {
+		case *ast.Ident:
+			ident = x
+			expr = nil
+		case *ast.SelectorExpr:
+			ident = x.Sel
+			expr = x.X
+		}
+		if ident == nil {
 			return
 		}
+		obj := pass.TypesInfo.ObjectOf(ident)
+		if obj == nil {
+			return
+		}
+		if ignorePointer {
+			if _, isPointer := obj.Type().(*types.Pointer); isPointer {
+				return
+			}
+		}
+		position, ok = lookupFinalObject(pass, finals, obj)
+		if ok {
+			break
+		}
+		field = true
 	}
-	if position, ok := lookupFinalObject(pass, finals, obj); ok {
-		switch op {
-		case token.ASSIGN:
+	if !ok {
+		return
+	}
+	var fieldprefix string
+	if field {
+		fieldprefix = "field of "
+	}
+	switch op {
+	case token.ASSIGN:
+		if flags.verbose > 0 {
 			pass.Reportf(
-				expr.Pos(),
-				"can't assign a value to final variable %s (directive %q declared here %s)",
-				ident.Name, directive, position.String(),
+				pos,
+				"cannot assign a value to %sfinal variable %s (directive %q declared here %s)",
+				fieldprefix, ident.Name, directive, position.String(),
 			)
-		case token.AND:
+		} else {
 			pass.Reportf(
-				expr.Pos(),
-				"can't reference final variable %s (directive %q declared here %s)",
-				ident.Name, directive, position.String(),
+				pos,
+				"cannot assign a value to %sfinal variable %s",
+				fieldprefix, ident.Name,
+			)
+		}
+	case token.AND:
+		if flags.verbose > 0 {
+			pass.Reportf(
+				pos,
+				"cannot reference %sfinal variable %s (directive %q declared here %s)",
+				fieldprefix, ident.Name, directive, position.String(),
+			)
+		} else {
+			pass.Reportf(
+				pos,
+				"cannot reference %sfinal variable %s",
+				fieldprefix, ident.Name,
 			)
 		}
 	}
