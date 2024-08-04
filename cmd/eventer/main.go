@@ -88,10 +88,10 @@ func generateCode(structs []positionedStruct, packageName string) string {
 
 	for i := range structs {
 		structName := structs[i].name
-		typeName := structName + "Type"
+		typeName := "type" + structName
 		builder.WriteString("// Generated for " + structName + "\n")
 		builder.WriteString(fmt.Sprintf("var %s = reflect.TypeOf((*%s)(nil))\n\n", typeName, structName))
-		builder.WriteString(fmt.Sprintf("func (e *%s) Typeof() reflect.Type {\n", structName))
+		builder.WriteString(fmt.Sprintf("func (*%s) Typeof() reflect.Type {\n", structName))
 		builder.WriteString(fmt.Sprintf("\treturn %s\n", typeName))
 		builder.WriteString("}\n\n")
 		builder.WriteString(fmt.Sprintf("func %sListener(h func(context.Context, *%s)) event.Listener[reflect.Type] {\n", structName, structName))
