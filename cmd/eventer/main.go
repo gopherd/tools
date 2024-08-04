@@ -88,6 +88,7 @@ func generateCode(structs []positionedStruct, packageName string) string {
 	for i := range structs {
 		structName := structs[i].name
 		typeName := structName + "Type"
+		builder.WriteString("// Generated for " + structName + "\n")
 		builder.WriteString(fmt.Sprintf("var %s = reflect.TypeOf((*%s)(nil))\n\n", typeName, structName))
 		builder.WriteString(fmt.Sprintf("func (e *%s) Typeof() reflect.Type {\n", structName))
 		builder.WriteString(fmt.Sprintf("\treturn %s\n", typeName))
@@ -102,7 +103,7 @@ func generateCode(structs []positionedStruct, packageName string) string {
 
 // writeToFile 将生成的代码写入文件
 func writeToFile(content, packageName string) error {
-	fileName := packageName + ".eventgen.go"
+	fileName := "eventer.gen.go"
 	return os.WriteFile(fileName, []byte(content), 0644)
 }
 
