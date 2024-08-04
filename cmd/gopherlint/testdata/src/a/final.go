@@ -37,8 +37,7 @@ func _() {
 	// Error: cannot assign a value to final variable x
 	x = 2
 	// Error: cannot reference final variable x
-	y := &x
-	unused(y)
+	unused(&x)
 
 	var z int //@mod:final
 	// It's ok because of @mod:final must be a document comment instead of line comment
@@ -50,6 +49,20 @@ func _() {
 
 	// It's ok
 	b.UserPtr.Reset()
+
+	//@mod:final
+	var slice = []int{1, 2}
+	// It's ok
+	slice[0] = 2
+	// cannot reference final variable slice
+	unused(&slice)
+
+	//@mod:final
+	var users = []b.UserInfo{
+		{Id: 1},
+	}
+	// It's ok
+	users[0].Id = 2
 }
 
 func unused(a ...interface{}) {}

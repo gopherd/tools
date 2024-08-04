@@ -120,14 +120,42 @@ func checkFinalObject(pass *analysis.Pass, finals map[types.Object]*finalDeclFac
 	var position token.Position
 	var ok bool
 	var field bool
+	var isPointer bool
+	var typ types.Type
+
+	if selector, ok := expr.(*ast.SelectorExpr); ok {
+		selection := pass.TypesInfo.Selections[x]
+		if selection != nil {
+			typ = selection.Obj().Type()
+		}
+	} else if typ == nil {
+		return
+	}
+
 	for expr != nil {
+		expr = util.Unparen(expr)
 		switch x := expr.(type) {
 		case *ast.Ident:
 			ident = x
 			expr = nil
 		case *ast.SelectorExpr:
-			ident = x.Sel
 			expr = x.X
+			ident = x.Sel
+			selection := pass.TypesInfo.Selections[x]
+			if selection != nil {
+				if t := selection.Obj().Type(); t == nil {
+					return
+				} else if util.IsPointer(typ) {
+				}
+			}
+		case *ast.IndexExpr:
+			expr = x.X
+			if typ := pass.TypesInfo.TypeOf(indexExpr); typ != nil {
+				if _, isArray := typ.(*types.Array); !isArray {
+					return
+				}
+			}
+			continue
 		}
 		if ident == nil {
 			return
@@ -136,10 +164,8 @@ func checkFinalObject(pass *analysis.Pass, finals map[types.Object]*finalDeclFac
 		if obj == nil {
 			return
 		}
-		if ignorePointer {
-			if _, isPointer := obj.Type().(*types.Pointer); isPointer {
-				return
-			}
+		if isPointer && (field || ignorePointer) {
+			return
 		}
 		position, ok = lookupFinalObject(pass, finals, obj)
 		if ok {
@@ -150,9 +176,9 @@ func checkFinalObject(pass *analysis.Pass, finals map[types.Object]*finalDeclFac
 	if !ok {
 		return
 	}
-	var fieldprefix string
+	var prefix string
 	if field {
-		fieldprefix = "field of "
+		prefix = "field of "
 	}
 	switch op {
 	case token.ASSIGN:
@@ -160,13 +186,13 @@ func checkFinalObject(pass *analysis.Pass, finals map[types.Object]*finalDeclFac
 			pass.Reportf(
 				pos,
 				"cannot assign a value to %sfinal variable %s (directive %q declared here %s)",
-				fieldprefix, ident.Name, directive, position.String(),
+				prefix, ident.Name, directive, position.String(),
 			)
 		} else {
 			pass.Reportf(
 				pos,
 				"cannot assign a value to %sfinal variable %s",
-				fieldprefix, ident.Name,
+				prefix, ident.Name,
 			)
 		}
 	case token.AND:
@@ -174,13 +200,13 @@ func checkFinalObject(pass *analysis.Pass, finals map[types.Object]*finalDeclFac
 			pass.Reportf(
 				pos,
 				"cannot reference %sfinal variable %s (directive %q declared here %s)",
-				fieldprefix, ident.Name, directive, position.String(),
+				prefix, ident.Name, directive, position.String(),
 			)
 		} else {
 			pass.Reportf(
 				pos,
 				"cannot reference %sfinal variable %s",
-				fieldprefix, ident.Name,
+				prefix, ident.Name,
 			)
 		}
 	}
