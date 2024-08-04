@@ -83,20 +83,20 @@ func generateCode(structs []positionedStruct, packageName string) string {
 		builder.WriteString("\t\"reflect\"\n")
 		builder.WriteString("\t\"context\"\n\n")
 		fmt.Fprintf(&builder, "\t\"%s\"\n", flags.eventpkg)
-		builder.WriteString(")\n\n")
+		builder.WriteString(")\n")
 	}
 
 	for i := range structs {
 		structName := structs[i].name
 		typeName := "type" + structName
-		builder.WriteString("// Generated for " + structName + "\n")
+		builder.WriteString("\n// Generated for " + structName + "\n")
 		builder.WriteString(fmt.Sprintf("var %s = reflect.TypeOf((*%s)(nil))\n\n", typeName, structName))
 		builder.WriteString(fmt.Sprintf("func (*%s) Typeof() reflect.Type {\n", structName))
 		builder.WriteString(fmt.Sprintf("\treturn %s\n", typeName))
 		builder.WriteString("}\n\n")
 		builder.WriteString(fmt.Sprintf("func %sListener(h func(context.Context, *%s)) event.Listener[reflect.Type] {\n", structName, structName))
 		builder.WriteString(fmt.Sprintf("\treturn event.Listen(%s, h)\n", typeName))
-		builder.WriteString("}\n\n")
+		builder.WriteString("}\n")
 	}
 
 	return builder.String()
