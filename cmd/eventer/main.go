@@ -15,8 +15,9 @@ import (
 )
 
 var flags struct {
-	suffix   string
-	eventpkg string
+	suffix    string
+	eventType string
+	eventpkg  string
 }
 
 type positionedStruct struct {
@@ -80,21 +81,42 @@ func generateCode(structs []positionedStruct, packageName string) string {
 
 	if len(structs) > 0 {
 		builder.WriteString("import (\n")
-		builder.WriteString("\t\"reflect\"\n")
+		if flags.eventType == "reflect.Type" {
+			builder.WriteString("\t\"reflect\"\n")
+		}
 		builder.WriteString("\t\"context\"\n\n")
 		fmt.Fprintf(&builder, "\t\"%s\"\n", flags.eventpkg)
 		builder.WriteString(")\n")
+
+		if flags.eventType != "reflect.Type" && flags.eventType != "string" {
+			// enums
+			builder.WriteString("\nconst (\n")
+			for i := range structs {
+				structName := structs[i].name
+				typeName := structName + "Type"
+				if i == 0 {
+					builder.WriteString(fmt.Sprintf("\t%s %s = iota + 1\n", typeName, flags.eventType))
+				} else {
+					builder.WriteString(fmt.Sprintf("\t%s\n", typeName))
+				}
+			}
+			builder.WriteString(")\n")
+		}
 	}
 
 	for i := range structs {
 		structName := structs[i].name
-		typeName := "type" + structName
+		typeName := structName + "Type"
 		builder.WriteString("\n// Generated for " + structName + "\n")
-		builder.WriteString(fmt.Sprintf("var %s = reflect.TypeOf((*%s)(nil))\n\n", typeName, structName))
-		builder.WriteString(fmt.Sprintf("func (*%s) Typeof() reflect.Type {\n", structName))
+		if flags.eventType == "reflect.Type" {
+			builder.WriteString(fmt.Sprintf("var %s = reflect.TypeOf((*%s)(nil))\n\n", typeName, structName))
+		} else if flags.eventType == "string" {
+			builder.WriteString(fmt.Sprintf("const %s = \"%s\"\n\n", typeName, structName))
+		}
+		builder.WriteString(fmt.Sprintf("func (*%s) Typeof() %s {\n", structName, flags.eventType))
 		builder.WriteString(fmt.Sprintf("\treturn %s\n", typeName))
 		builder.WriteString("}\n\n")
-		builder.WriteString(fmt.Sprintf("func %sListener(h func(context.Context, *%s)) event.Listener[reflect.Type] {\n", structName, structName))
+		builder.WriteString(fmt.Sprintf("func %sListener(h func(context.Context, *%s) error) event.Listener[%s] {\n", structName, structName, flags.eventType))
 		builder.WriteString(fmt.Sprintf("\treturn event.Listen(%s, h)\n", typeName))
 		builder.WriteString("}\n")
 	}
@@ -109,8 +131,9 @@ func writeToFile(content, packageName string) error {
 }
 
 func main() {
-	flag.StringVar(&flags.suffix, "suffix", "Event", "Type suffix")
-	flag.StringVar(&flags.eventpkg, "eventpkg", "github.com/gopherd/core/event", "External event package")
+	flag.StringVar(&flags.suffix, "s", "Event", "Type suffix")
+	flag.StringVar(&flags.eventType, "t", "reflect.Type", "Type of event")
+	flag.StringVar(&flags.eventpkg, "pkg", "github.com/gopherd/core/event", "External event package")
 	flag.Parse()
 
 	pkg, err := build.Default.ImportDir(".", build.IgnoreVendor)
