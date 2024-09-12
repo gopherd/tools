@@ -114,7 +114,7 @@ func processCommentGroup(fset *token.FileSet, group *ast.CommentGroup, root *Tem
 	currentItem := addToTree(root, path[:end])
 	offset := 1
 	if name := strings.TrimSpace(path[end+1:]); name != "" {
-		group.List[0].Text = "// _" + currentItem.Name + "_ " + name
+		group.List[0].Text = "// `" + currentItem.Name + "` " + name
 		offset = 0
 	}
 	path = path[:end]
