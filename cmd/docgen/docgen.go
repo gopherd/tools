@@ -135,6 +135,7 @@ func processCommentGroup(fset *token.FileSet, group *ast.CommentGroup, root *Tem
 
 	var content bytes.Buffer
 	var coding int
+	newline := true
 	const (
 		codingNone = iota
 		codingStart
@@ -143,22 +144,31 @@ func processCommentGroup(fset *token.FileSet, group *ast.CommentGroup, root *Tem
 	for _, comment := range group.List[offset:] {
 		text := strings.TrimPrefix(comment.Text, "//")
 		text = trimSpace(text)
+		shouldNewline := text == ""
 		if strings.HasPrefix(text, "```") {
+			shouldNewline = true
 			if coding == codingStart {
 				coding = codingEnd
-				if content.Len() > 1 && bytes.Equal(content.Bytes()[content.Len()-2:], []byte("\n\n")) {
-					content.Truncate(content.Len() - 1)
-				}
 			} else {
 				coding = codingStart
-				content.WriteString("\n")
 			}
 		}
-		content.WriteString(text)
-		if coding != codingNone || (text == "" || isListItem(text)) {
+		shouldNewline = shouldNewline || coding == codingStart
+		shouldNewline = shouldNewline || isListItem(text)
+		if !newline && shouldNewline {
+			newline = true
 			content.WriteString("\n")
-		} else {
-			content.WriteString(" ")
+		}
+
+		if text != "" {
+			if !newline {
+				content.WriteString(" ")
+			}
+			content.WriteString(text)
+		}
+		newline = shouldNewline
+		if newline {
+			content.WriteString("\n")
 		}
 		if coding == codingEnd {
 			coding = codingNone
