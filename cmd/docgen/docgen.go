@@ -314,7 +314,7 @@ func generateMarkdown(item *TemplateItem, output string) error {
 }
 
 func linkName(path string) string {
-	return "user-content-" + strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(path, ".", "-"), "/", "_"), " ", "-")
+	return "user-content-" + strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(path, ".", "_"), "/", "_"), " ", "_")
 }
 
 func writeMarkdownTree(toc *bytes.Buffer, writers Writers, item *TemplateItem, depth int, parentPath string) {
@@ -331,12 +331,20 @@ func writeMarkdownTree(toc *bytes.Buffer, writers Writers, item *TemplateItem, d
 				fmt.Fprintf(toc, "%s<li><a href=\"#%s\">%s</a></li>\n", strings.Repeat("  ", depth), linkName(fullPath), item.Name)
 			}
 		} else {
-			fmt.Fprintf(w, "%s %s {#%s}\n", strings.Repeat("#", level), item.Name, linkName(fullPath))
+			title := fmt.Sprintf("%s %s {#%s}", strings.Repeat("#", level), item.Name, linkName(fullPath))
+			if item.IsProperty() {
+				fmt.Fprintf(w, "%s\n<div className=\"property-container\">\n", title)
+			} else {
+				fmt.Fprintf(w, "%s\n", title)
+			}
 		}
 
 		if item.Content != "" {
 			text := processLinks(item.Content)
 			fmt.Fprintf(w, "\n%s\n\n", trimSpace(text))
+		}
+		if item.IsProperty() {
+			fmt.Fprintf(w, "</div>\n\n")
 		}
 	}
 
