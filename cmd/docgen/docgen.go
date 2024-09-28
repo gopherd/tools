@@ -19,12 +19,13 @@ import (
 )
 
 var args struct {
-	inputs flags.Slice // input directories or files
-	output string      // output directory or file if it has suffix ".md"
-	toc    bool        // enable table of contents
-	title  string      // top title
-	level  int         // heading level
-	tag    string      // tag: api
+	inputs       flags.Slice // input directories or files
+	output       string      // output directory or file if it has suffix ".md"
+	toc          bool        // enable table of contents
+	frontMatters flags.Slice // front matter content
+	title        string      // top title
+	level        int         // heading level
+	tag          string      // tag: api
 }
 
 type TemplateItem struct {
@@ -65,6 +66,7 @@ func main() {
 	flag.StringVar(&args.output, "o", "README.md", "Output file")
 	flag.BoolVar(&args.toc, "toc", false, "Enable table of contents")
 	flag.StringVar(&args.title, "title", "API Reference", "top title")
+	flag.Var(&args.frontMatters, "M", "front matter lines")
 	flag.StringVar(&args.tag, "tag", "api", "Specify the tag to search for")
 	flag.IntVar(&args.level, "level", 1, "heading level")
 	flag.Parse()
@@ -271,6 +273,9 @@ func (m *dirWriter) Get(path string) io.Writer {
 	if err != nil {
 		panic(err)
 	}
+	for _, m := range args.frontMatters {
+		f.WriteString(m + "\n")
+	}
 	m.writers[name] = f
 	return f
 }
@@ -308,6 +313,9 @@ func generateMarkdown(item *TemplateItem, output string) error {
 			return err
 		}
 		defer file.Close()
+		for _, m := range args.frontMatters {
+			file.WriteString(m + "\n")
+		}
 		if args.title != "" {
 			file.WriteString("# " + args.title + "\n\n")
 		}
