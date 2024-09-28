@@ -147,8 +147,9 @@ func processCommentGroup(fset *token.FileSet, group *ast.CommentGroup, root *Tem
 	)
 	for _, comment := range group.List[offset:] {
 		text := strings.TrimPrefix(comment.Text, "//")
+		shouldNewline := strings.HasPrefix(text, "\t")
 		text = trimSpace(text)
-		shouldNewline := text == ""
+		shouldNewline = shouldNewline || text == ""
 		if strings.HasPrefix(text, "```") {
 			shouldNewline = true
 			if coding == codingStart {
