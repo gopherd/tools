@@ -26,6 +26,7 @@ var args struct {
 	title        string      // top title
 	level        int         // heading level
 	tag          string      // tag: api
+	ext          string      // file extension
 }
 
 type TemplateItem struct {
@@ -69,6 +70,7 @@ func main() {
 	flag.Var(&args.frontMatters, "M", "front matter lines")
 	flag.StringVar(&args.tag, "tag", "api", "Specify the tag to search for")
 	flag.IntVar(&args.level, "level", 1, "heading level")
+	flag.StringVar(&args.ext, "ext", ".md", "file extension")
 	flag.Parse()
 
 	root := &TemplateItem{Children: make(map[string]*TemplateItem)}
@@ -269,7 +271,7 @@ func (m *dirWriter) Get(path string) io.Writer {
 	if w, ok := m.writers[name]; ok {
 		return w
 	}
-	f, err := os.Create(filepath.Join(m.dir, name+".md"))
+	f, err := os.Create(filepath.Join(m.dir, name+args.ext))
 	if err != nil {
 		panic(err)
 	}
@@ -295,7 +297,7 @@ func generateMarkdown(item *TemplateItem, output string) error {
 	var writers Writers
 	var toc *bytes.Buffer
 	var content *bytes.Buffer
-	if strings.HasSuffix(output, ".md") {
+	if strings.HasSuffix(output, args.ext) {
 		if args.toc {
 			toc = &bytes.Buffer{}
 		}
