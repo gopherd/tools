@@ -327,6 +327,14 @@ func linkName(path string) string {
 	return "user-content-" + strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(path, ".", "_"), "/", "_"), " ", "_")
 }
 
+func fullPath(name string) string {
+	i := strings.LastIndex(name, ".")
+	if i < 0 {
+		return name
+	}
+	return name[:i] + "/" + name[i:]
+}
+
 func writeMarkdownTree(toc *bytes.Buffer, writers Writers, item *TemplateItem, depth int, parentPath string) {
 	if item.Name != "" {
 		level := depth + args.level
@@ -382,7 +390,7 @@ func processLinks(content string) string {
 		if len(parts) == 3 {
 			linkText := parts[1]
 			linkPath := parts[2]
-			anchorName := linkName(linkPath)
+			anchorName := linkName(fullPath(linkPath))
 			return fmt.Sprintf("[%s](#%s)", linkText, anchorName)
 		}
 		return match
