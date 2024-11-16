@@ -123,7 +123,7 @@ func checkFinalObject(pass *analysis.Pass, finals map[types.Object]*finalDeclFac
 	var isPointer bool
 	var typ types.Type
 
-	if selector, ok := expr.(*ast.SelectorExpr); ok {
+	if x, ok := expr.(*ast.SelectorExpr); ok {
 		selection := pass.TypesInfo.Selections[x]
 		if selection != nil {
 			typ = selection.Obj().Type()
@@ -150,7 +150,7 @@ func checkFinalObject(pass *analysis.Pass, finals map[types.Object]*finalDeclFac
 			}
 		case *ast.IndexExpr:
 			expr = x.X
-			if typ := pass.TypesInfo.TypeOf(indexExpr); typ != nil {
+			if typ := pass.TypesInfo.TypeOf(expr); typ != nil {
 				if _, isArray := typ.(*types.Array); !isArray {
 					return
 				}

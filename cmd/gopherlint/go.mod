@@ -1,8 +1,10 @@
 module github.com/gopherd/tools/cmd/gopherlint
 
-go 1.16
+go 1.23
+
+require golang.org/x/tools v0.25.0
 
 require (
-	golang.org/x/sys v0.0.0-20220204135822-1c1b9b1eba6a // indirect
-	golang.org/x/tools v0.1.9
+	golang.org/x/mod v0.21.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
 )
